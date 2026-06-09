@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="十篇精听工坊 — 基于尚雯婕学习法的英语精听训练工具">
+  <title>十篇精听工坊</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Sidebar Overlay (mobile) -->
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <div class="app-layout">
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <i class="fa-solid fa-headphones sidebar-brand-icon"></i>
+        <span class="sidebar-brand-text">十篇精听工坊</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="#" data-view="materials" class="active">
+          <i class="fa-solid fa-folder-open"></i> 素材管理
+        </a>
+        <a href="#" data-view="training">
+          <i class="fa-solid fa-pen-to-square"></i> 开始训练
+        </a>
+        <a href="#" data-view="vocabulary">
+          <i class="fa-solid fa-book"></i> 生词本
+        </a>
+        <a href="#" data-view="dashboard">
+          <i class="fa-solid fa-chart-line"></i> 进度看板
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button id="focus-mode-nav-btn">
+          <i class="fa-solid fa-clock"></i>
+          <span>专注模式</span>
+        </button>
+        <button id="theme-toggle-btn">
+          <i class="fa-solid fa-circle-half-stroke w-5 text-center" id="theme-toggle-icon"></i>
+          <span id="theme-toggle-label">跟随系统</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ============ MAIN CONTENT ============ -->
+    <main class="main-content">
+      <!-- Mobile header -->
+      <div class="flex items-center gap-3 mb-4 md:hidden">
+        <button class="mobile-menu-btn" id="mobile-menu-btn">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <span class="font-bold text-lg">十篇精听工坊</span>
+      </div>
+
+      <!-- View: 素材管理 -->
+      <div class="view-panel" id="view-materials"></div>
+
+      <!-- View: 开始训练 -->
+      <div class="view-panel hidden" id="view-training"></div>
+
+      <!-- View: 生词本 -->
+      <div class="view-panel hidden" id="view-vocabulary"></div>
+
+      <!-- View: 进度看板 -->
+      <div class="view-panel hidden" id="view-dashboard"></div>
+    </main>
+  </div>
+
+  <!-- Application Script -->
+  <script type="module" src="js/app.js"></script>
+
+  <!-- Inline handlers for fast response -->
+  <script type="module">
+    import { toggleTheme, updateThemeToggleIcon } from './js/theme.js';
+    import { showFocusSetupDialog } from './js/focus-mode.js';
+
+    // 立即更新图标
+    updateThemeToggleIcon();
+
+    // 绑定主题切换按钮
+    document.getElementById('theme-toggle-btn').addEventListener('click', () => {
+      toggleTheme();
+    });
+
+    // 绑定专注模式按钮
+    document.getElementById('focus-mode-nav-btn').addEventListener('click', () => {
+      showFocusSetupDialog();
+    });
+  </script>
+</body>
+</html>
