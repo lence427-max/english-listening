@@ -1,5 +1,5 @@
 /**
- * 十篇精听工坊 — 主题管理
+ * Silentium — 主题管理
  */
 
 import { getSettings, saveSettings } from './storage.js';

@@ -1,5 +1,5 @@
 /* ========================================
-   十篇精听工坊 — 全局样式 & 主题变量
+   Silentium — 全局样式 & 主题变量
    ======================================== */
 
 /* --- CSS Custom Properties (浅色默认) --- */
@@ -1104,4 +1104,446 @@ body {
 .training-material-card:hover {
   border-color: var(--primary);
   box-shadow: var(--card-shadow);
+}
+
+/* ========================================
+   训练反馈页
+   ======================================== */
+
+/* 准确率大数字 */
+.feedback-score {
+  font-size: 4rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text);
+}
+
+/* 等级标签 */
+.feedback-grade {
+  display: inline-block;
+  font-size: 1.25rem;
+  font-weight: 600;
+  padding: 0.25rem 1.25rem;
+  border-radius: var(--radius-full);
+  margin-top: 0.5rem;
+}
+
+.feedback-grade-A { background: var(--success-light); color: #15803d; }
+.dark .feedback-grade-A { color: var(--success); }
+
+.feedback-grade-B { background: var(--primary-light); color: var(--primary); }
+
+.feedback-grade-C { background: var(--warning-light); color: #b45309; }
+.dark .feedback-grade-C { color: var(--warning); }
+
+.feedback-grade-D { background: rgba(239, 68, 68, 0.1); color: #b91c1c; }
+.dark .feedback-grade-D { color: var(--danger); }
+
+.feedback-grade-E { background: var(--danger-light); color: #b91c1c; }
+.dark .feedback-grade-E { color: var(--danger); }
+
+/* 错误统计网格 */
+.feedback-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 480px) {
+  .feedback-stat-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+}
+
+.feedback-stat-card {
+  text-align: center;
+  padding: 1rem 0.5rem;
+  border-radius: var(--radius);
+}
+
+.feedback-stat-num {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.feedback-stat-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+/* 逐词对比 */
+.feedback-comparison {
+  font-family: var(--font-mono);
+  font-size: 0.9375rem;
+  line-height: 2.2;
+  word-spacing: 0.25rem;
+}
+
+.fb-word {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin: 1px;
+  position: relative;
+}
+
+.fb-correct {
+  color: var(--success);
+}
+
+.fb-missing {
+  color: var(--warning);
+  border-bottom: 2px dashed var(--warning);
+}
+
+.fb-extra {
+  color: var(--text-tertiary);
+  text-decoration: line-through;
+}
+
+.fb-replacement {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.dark .fb-replacement {
+  background: rgba(248, 113, 113, 0.15);
+}
+
+/* 词内元素 */
+.fb-orig-word {
+  /* 原文词 */
+}
+
+.fb-arrow {
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+  margin: 0 1px;
+}
+
+.fb-user-word {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.fb-tag {
+  font-size: 0.625rem;
+  color: var(--text-tertiary);
+  font-family: inherit;
+}
+
+/* [+] 加词按钮 */
+.fb-add-btn {
+  font-size: 0.625rem;
+  padding: 0 4px;
+  cursor: pointer;
+  color: var(--primary);
+  background: none;
+  border: 1px solid var(--primary);
+  border-radius: 3px;
+  line-height: 1.4;
+  margin-left: 1px;
+  transition: all var(--transition-fast);
+}
+
+.fb-add-btn:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.fb-add-btn:disabled {
+  border-color: var(--success);
+  color: var(--success);
+  cursor: default;
+}
+
+.fb-add-btn:disabled:hover {
+  background: transparent;
+  color: var(--success);
+}
+
+/* ========================================
+   段落热力图
+   ======================================== */
+
+.heatmap-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.heatmap-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  transition: background var(--transition-fast);
+}
+
+.heatmap-row:hover {
+  background: var(--bg);
+}
+
+.heatmap-weakest {
+  border-color: var(--danger);
+  background: var(--danger-light);
+}
+
+.dark .heatmap-weakest {
+  background: rgba(248, 113, 113, 0.1);
+}
+
+.heatmap-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.heatmap-bar-wrap {
+  flex: 1;
+  height: 10px;
+  background: var(--border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.heatmap-bar {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
+  min-width: 0;
+}
+
+.heatmap-score {
+  font-weight: 600;
+  font-size: 0.875rem;
+  min-width: 44px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.heatmap-retrain-btn {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+}
+
+/* ========================================
+   段落拆分编辑器（素材模态框内）
+   ======================================== */
+
+.para-block {
+  padding: 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  transition: border-color var(--transition-fast);
+}
+
+.para-block:hover {
+  border-color: var(--primary);
+}
+
+.para-block .para-textarea {
+  font-family: var(--font-mono);
+  resize: vertical;
+  min-height: 50px;
+}
+
+.para-merge-btn,
+.para-split-btn {
+  font-size: 0.6875rem;
+  padding: 0.125rem 0.5rem;
+}
+
+/* ========================================
+   准确率趋势图
+   ======================================== */
+
+.trend-chart-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.trend-chart-svg {
+  width: 100%;
+  max-width: 640px;
+  display: block;
+  margin: 0 auto;
+}
+
+.trend-dot {
+  cursor: pointer;
+  transition: r 0.15s ease;
+}
+
+.trend-dot:hover {
+  r: 5;
+  stroke-width: 2.5;
+}
+
+/* ========================================
+   影子跟读
+   ======================================== */
+
+.shadow-text {
+  font-size: 1.125rem;
+  line-height: 2;
+  color: var(--text);
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+}
+
+#shadow-record-btn.recording {
+  animation: pulse 1.5s infinite;
+  background: #dc2626;
+}
+
+/* ========================================
+   分段训练
+   ======================================== */
+
+.seg-para-text {
+  font-size: 1.0625rem;
+  line-height: 1.9;
+  color: var(--text);
+}
+
+/* 分段训练音频条 */
+.seg-audio-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.seg-audio-bar .seg-play-btn {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+  transition: background var(--transition-fast);
+}
+
+.seg-audio-bar .seg-play-btn:hover {
+  background: var(--primary-hover);
+}
+
+.seg-audio-bar .progress-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.seg-audio-bar .progress-track {
+  width: 100%;
+  height: 0.375rem;
+  background: var(--border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+}
+
+.seg-audio-bar .progress-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: var(--radius-full);
+  width: 0%;
+  transition: width 0.1s linear;
+}
+
+.seg-audio-bar .time-display {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.seg-progress-grid {
+  display: flex;
+  gap: 4px;
+}
+
+.seg-prog-block {
+  flex: 1;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.seg-prog-block:hover {
+  filter: brightness(0.9);
+}
+
+.seg-prog-num {
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.seg-prog-pending {
+  background: var(--border);
+  color: var(--text-tertiary);
+}
+
+.seg-prog-current {
+  background: var(--primary-light);
+  color: var(--primary);
+  border: 1px solid var(--primary);
+}
+
+.seg-prog-done {
+  background: var(--success-light);
+  color: #15803d;
+}
+
+.dark .seg-prog-done {
+  color: var(--success);
+}
+
+/* ========================================
+   段落时间微调
+   ======================================== */
+
+.time-adjust-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.time-adjust-btn {
+  font-size: 0.6875rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-mono);
+}
+
+.time-adjust-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
 }

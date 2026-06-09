@@ -1,5 +1,5 @@
 /**
- * 十篇精听工坊 — 智能复习模块
+ * Silentium — 智能复习模块
  */
 
 import { getMaterials, getTrainingRecords, upsertMaterial, saveTrainingRecord } from './storage.js';

@@ -1,5 +1,5 @@
 /**
- * 十篇精听工坊 — 分句与时间戳编辑模块
+ * Silentium — 分句与时间戳编辑模块
  */
 
 import { getMaterialById, upsertMaterial, getAudio } from './storage.js';

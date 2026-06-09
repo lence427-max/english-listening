@@ -1,5 +1,5 @@
 /**
- * 十篇精听工坊 — 素材管理模块
+ * Silentium — 素材管理模块
  */
 
 import {
@@ -8,6 +8,7 @@ import {
   exportAllData, importAllData,
 } from './storage.js';
 import { createMaterial, createSentence } from './data-structure.js';
+import { splitParagraphs, estimateParagraphTimes } from './paragraph.js';
 import { createPlayer } from './player.js';
 import {
   generateId, formatTime, formatDateCN, formatFileSize,
@@ -125,7 +126,7 @@ function renderMaterialList(materials) {
                 <div class="font-medium truncate" style="color: var(--text);">${sanitizeHTML(m.title) || '未命名素材'}</div>
                 <div class="text-xs mt-0.5" style="color: var(--text-secondary);">
                   ${m.audioDuration ? formatTime(m.audioDuration) : '无音频'}
-                  · ${m.dictationResult ? (m.dictationResult.filter(w => !w.match).length === 0 ? '✓ 正确' : m.dictationResult.filter(w => !w.match).length + ' 处错误') : ''}
+                  · ${getDictationErrCount(m)}
                   · ${formatDateCN(m.updatedAt)}
                 </div>
               </div>
@@ -148,6 +149,25 @@ function renderMaterialList(materials) {
 function getMaterialColor(index) {
   const colors = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#f97316', '#14b8a6', '#6366f1'];
   return colors[index % colors.length];
+}
+
+/**
+ * 获取听写错误数（兼容新旧 dictationResult 格式）
+ */
+function getDictationErrCount(material) {
+  const r = material.dictationResult;
+  if (!r) return '';
+  // 新格式：{pairs, stats, accuracy, grade, createdAt}
+  if (r.stats) {
+    const err = r.stats.missing + r.stats.extra + r.stats.replacement;
+    return err === 0 ? '✓ 正确' : err + ' 处错误';
+  }
+  // 旧格式：[{word, userWord, match}]
+  if (Array.isArray(r)) {
+    const err = r.filter(w => !w.match).length;
+    return err === 0 ? '✓ 正确' : err + ' 处错误';
+  }
+  return '';
 }
 
 /**
@@ -212,10 +232,20 @@ export function showMaterialModal(materialId = null) {
                     placeholder="粘贴英语原文，按 . ! ? 和换行自动分句&#10;&#10;例如：&#10;Artificial intelligence is transforming our world. But what exactly is AI? Let's find out."
           >${sanitizeHTML(material?.originalText || '')}</textarea>
           <div class="flex items-center justify-between mt-1">
-            <p class="form-hint mb-0">按句号、问号、感叹号或换行自动分句</p>
+            <p class="form-hint mb-0"></p>
             <span class="text-xs" style="color: var(--text-tertiary);" id="mat-text-stats"></span>
           </div>
         </div>
+
+        <!-- 段落拆分编辑器 -->
+        <div class="form-group" id="para-editor-section">
+          <div class="flex items-center justify-between mb-2">
+            <label class="form-label mb-0">📐 段落拆分</label>
+            <span class="text-xs" style="color: var(--text-secondary);" id="para-count"></span>
+          </div>
+          <div id="para-list" class="space-y-3"></div>
+        </div>
+
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="modal-cancel">取消</button>
@@ -254,6 +284,108 @@ export function showMaterialModal(materialId = null) {
   };
   updateTextStats();
   textArea.addEventListener('input', updateTextStats);
+
+  // ========== 段落拆分编辑器 ==========
+  const paraList = overlay.querySelector('#para-list');
+  const paraCount = overlay.querySelector('#para-count');
+
+  function renderParagraphs(text) {
+    if (!text.trim()) {
+      paraList.innerHTML = '<p class="text-xs" style="color: var(--text-tertiary);">输入原文后可预览段落拆分</p>';
+      paraCount.textContent = '';
+      return;
+    }
+    const paragraphs = splitParagraphs(text);
+    paraCount.textContent = `${paragraphs.length} 段`;
+
+    paraList.innerHTML = paragraphs.map((p, i) => `
+      <div class="para-block" data-para="${i}">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs font-medium" style="color: var(--text-secondary);">段落${i + 1} (${p.wordCount} 词)</span>
+          <div class="flex gap-2">
+            ${i > 0 ? `<button class="btn btn-ghost btn-sm para-merge-btn" data-para="${i}" title="合并到上一段"><i class="fa-solid fa-arrow-up"></i> 合并</button>` : ''}
+            <button class="btn btn-ghost btn-sm para-split-btn" data-para="${i}" title="在段落中间插入空行拆分"><i class="fa-solid fa-scissors"></i> 拆分</button>
+          </div>
+        </div>
+        <textarea class="form-textarea para-textarea" data-para="${i}" rows="3"
+                  style="font-size: 0.8125rem; min-height: 50px;">${sanitizeHTML(p.text)}</textarea>
+      </div>
+    `).join('');
+
+    // 绑定段落编辑事件
+    paraList.querySelectorAll('.para-textarea').forEach(ta => {
+      ta.addEventListener('input', () => {
+        syncParagraphsToMain();
+      });
+    });
+
+    // 合并到上一段
+    paraList.querySelectorAll('.para-merge-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.para, 10);
+        const paragraphs = splitParagraphs(textArea.value);
+        if (idx > 0 && idx < paragraphs.length) {
+          // 合并 idx 到 idx-1
+          paragraphs[idx - 1].text += '\n' + paragraphs[idx].text;
+          paragraphs.splice(idx, 1);
+          const merged = paragraphs.map(p => p.text).join('\n\n');
+          textArea.value = merged;
+          updateTextStats();
+          renderParagraphs(merged);
+        }
+      });
+    });
+
+    // 拆分段落
+    paraList.querySelectorAll('.para-split-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.para, 10);
+        const paragraphs = splitParagraphs(textArea.value);
+        if (idx < paragraphs.length) {
+          const text = paragraphs[idx].text;
+          // 在第一个句号/问号/感叹号后拆分
+          const mid = Math.floor(text.length / 2);
+          const splitAt = text.indexOf('. ', mid);
+          if (splitAt > 0) {
+            paragraphs[idx].text = text.substring(0, splitAt + 1).trim();
+            paragraphs.splice(idx + 1, 0, { text: text.substring(splitAt + 2).trim() });
+          } else {
+            // 在中间位置用空行拆分
+            const half = Math.floor(text.length / 2);
+            paragraphs[idx].text = text.substring(0, half).trim();
+            paragraphs.splice(idx + 1, 0, { text: text.substring(half).trim() });
+          }
+          const result = paragraphs.map(p => p.text).join('\n\n');
+          textArea.value = result;
+          updateTextStats();
+          renderParagraphs(result);
+        }
+      });
+    });
+  }
+
+  function syncParagraphsToMain() {
+    const texts = [];
+    paraList.querySelectorAll('.para-textarea').forEach(ta => {
+      texts.push(ta.value.trim());
+    });
+    if (texts.length > 0) {
+      textArea.value = texts.join('\n\n');
+      updateTextStats();
+    }
+  }
+
+  // 初始渲染段落
+  renderParagraphs(textArea.value);
+
+  // 原文变化时重新渲染段落（防抖）
+  let paraTimer;
+  textArea.addEventListener('input', () => {
+    clearTimeout(paraTimer);
+    paraTimer = setTimeout(() => renderParagraphs(textArea.value), 500);
+  });
+
+  // ==========================================
 
   overlay.querySelector('#mat-clean-btn').addEventListener('click', async () => {
     const { cleanTranscript, getCleanReport } = await import('./text-cleaner.js');
@@ -308,6 +440,13 @@ export function showMaterialModal(materialId = null) {
     const id = material?.id || generateId();
     const duration = audioFile ? parseFloat(fileInput.dataset.duration || '0') : (material?.audioDuration || 0);
 
+    // 从原文生成段落数据
+    const paragraphs = splitParagraphs(text).map((p, i) => ({
+      ...p,
+      id: generateId(),
+    }));
+    estimateParagraphTimes(paragraphs, duration);
+
     const newMaterial = createMaterial({
       ...(material || {}),
       id,
@@ -317,6 +456,7 @@ export function showMaterialModal(materialId = null) {
       audioFileName: audioFile ? audioFile.name : (material?.audioFileName || ''),
       audioDuration: duration,
       sentences: [],
+      paragraphs,
       status: material?.status || 'pending',
     });
 
@@ -364,8 +504,8 @@ window._openMaterial = function (id) {
   const material = getMaterialById(id);
   if (!material) return;
   currentViewMaterialId = id;
-  // 直接跳转到训练视图，打开该素材
-  window.App.switchView('training', { materialId: id });
+  // 默认进入分段训练
+  window.App.switchView('segmented', { materialId: id });
 };
 
 // ==================== 菜单切换 ====================

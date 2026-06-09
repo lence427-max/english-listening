@@ -1,5 +1,5 @@
 /**
- * 十篇精听工坊 — 数据存储模块
+ * Silentium — 数据存储模块
  * LocalStorage（元数据） + IndexedDB（音频 Blob）
  */
 
@@ -379,4 +379,48 @@ export async function clearAllData() {
   return new Promise((resolve) => {
     tx.oncomplete = () => resolve(true);
   });
+}
+
+// ==================== 连续学习天数 ====================
+
+/**
+ * 获取连续学习数据
+ */
+export function getStreakData() {
+  const data = getItem(STORAGE_KEYS.STREAK);
+  return data || { lastActiveDate: null, currentStreak: 0, longestStreak: 0 };
+}
+
+/**
+ * 记录今日训练（在完成听写后调用）
+ */
+export function recordTrainingDay() {
+  const streak = getStreakData();
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+  if (streak.lastActiveDate === today) {
+    // 今天已经记录过
+    return streak;
+  }
+
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+  if (streak.lastActiveDate === yesterday) {
+    // 连续
+    streak.currentStreak++;
+  } else if (!streak.lastActiveDate) {
+    // 第一次
+    streak.currentStreak = 1;
+  } else {
+    // 中断，重新开始
+    streak.currentStreak = 1;
+  }
+
+  streak.lastActiveDate = today;
+  if (streak.currentStreak > streak.longestStreak) {
+    streak.longestStreak = streak.currentStreak;
+  }
+
+  setItem(STORAGE_KEYS.STREAK, streak);
+  return streak;
 }

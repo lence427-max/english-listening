@@ -1,5 +1,5 @@
 /**
- * 十篇精听工坊 — 数据结构定义与校验
+ * Silentium — 数据结构定义与校验
  */
 
 import { generateId } from './utils.js';
@@ -18,8 +18,11 @@ export function createMaterial(data = {}) {
     audioFileName: data.audioFileName || '',
     audioDuration: data.audioDuration || 0,
     sentences: data.sentences || [],
+    paragraphs: data.paragraphs || [],                // [{id, index, text, startTime, endTime, wordCount}]
     dictationInput: data.dictationInput || '',       // 整篇听写输入
-    dictationResult: data.dictationResult || null,    // 对比结果 [{word, userWord, match}]
+    dictationResult: data.dictationResult || null,    // 对比结果 {pairs, stats, accuracy, grade, createdAt}
+    scoreHistory: data.scoreHistory || [],             // [{accuracy, grade, stats, createdAt}] 最多20条
+    paragraphResults: data.paragraphResults || {},      // {[paraIndex]: {pairs, stats, accuracy, grade, createdAt}}
     status: data.status || 'pending',                 // pending | dictating | completed
     createdAt: data.createdAt || new Date().toISOString(),
     updatedAt: data.updatedAt || new Date().toISOString(),
@@ -178,6 +181,7 @@ export const STORAGE_KEYS = {
   VOCABULARY: 'vocabulary',
   SETTINGS: 'settings',
   FOCUS_SESSIONS: 'focusSessions',
+  STREAK: 'streakData',
 };
 
 export const DB_NAME = 'EnglishListeningDB';

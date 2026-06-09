@@ -1,5 +1,5 @@
 /**
- * 十篇精听工坊 — 主应用控制器
+ * Silentium — 主应用控制器
  * 初始化、路由、视图切换
  */
 
@@ -102,8 +102,8 @@ function switchView(view, opts = {}) {
       break;
     case 'training':
       if (opts.materialId) {
-        // 直接打开特定素材的训练
-        startTraining(target, opts.materialId);
+        // 直接打开特定素材的训练（可带 paragraphIndex 进入段落重练模式）
+        startTraining(target, opts.materialId, opts.paragraphIndex);
       } else {
         renderTrainingView(target);
       }
@@ -116,6 +116,15 @@ function switchView(view, opts = {}) {
     case 'dashboard':
       renderDashboardView(target);
       bindDashboardEvents(target);
+      break;
+    case 'feedback':
+      import('./feedback.js').then(m => m.renderFeedbackView(target, opts.materialId));
+      break;
+    case 'shadowing':
+      import('./shadowing.js').then(m => m.renderShadowingView(target, opts.materialId));
+      break;
+    case 'segmented':
+      import('./segmented.js').then(m => m.renderSegmentedView(target, opts.materialId));
       break;
   }
 
@@ -217,10 +226,18 @@ function renderTrainingView(container) {
                   <span class="text-xs" style="color: var(--text-secondary);">
                     ${getActionLabel(m.status)}
                   </span>
-                  <button class="btn btn-primary btn-sm start-training-btn" data-id="${m.id}">
-                    ${m.status === 'completed' ? '重新训练' : '开始训练'}
-                    <i class="fa-solid fa-arrow-right"></i>
-                  </button>
+                  <div class="flex items-center gap-2">
+                    <button class="btn btn-ghost btn-sm start-training-btn" data-id="${m.id}" title="整篇听写">
+                      整篇
+                    </button>
+                    <button class="btn btn-secondary btn-sm shadowing-start-btn" data-id="${m.id}" title="影子跟读">
+                      <i class="fa-solid fa-microphone"></i> 跟读
+                    </button>
+                    <button class="btn btn-primary btn-sm segmented-start-btn" data-id="${m.id}">
+                      ${m.status === 'completed' ? '重新训练' : '开始训练'}
+                      <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -248,6 +265,24 @@ function renderTrainingView(container) {
       startTraining(container, id);
     });
   });
+
+  // 影子跟读按钮
+  container.querySelectorAll('.shadowing-start-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      window.App.switchView('shadowing', { materialId: id });
+    });
+  });
+
+  // 分段训练按钮
+  container.querySelectorAll('.segmented-start-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      window.App.switchView('segmented', { materialId: id });
+    });
+  });
 }
 
 function getActionLabel(status) {
@@ -259,13 +294,13 @@ function getActionLabel(status) {
   }
 }
 
-async function startTraining(container, materialId) {
+async function startTraining(container, materialId, paragraphIndex) {
   const material = getMaterials().find(m => m.id === materialId);
   if (!material) return;
 
   // 跳过手动分句，直接进入听写（内部自动按段落分割）
   const { renderDictationView } = await import('./dictation.js');
-  renderDictationView(container, materialId);
+  renderDictationView(container, materialId, paragraphIndex);
 }
 
 /**

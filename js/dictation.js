@@ -1,17 +1,25 @@
 /**
- * 十篇精听工坊 — 极简听写（整篇模式）
+ * Silentium — 极简听写（整篇模式）
  */
 
-import { getMaterialById, upsertMaterial, getAudio } from './storage.js';
+import { getMaterialById, upsertMaterial, getAudio, recordTrainingDay } from './storage.js';
 import { createPlayer } from './player.js';
 import { formatTimeMs, showToast, sanitizeHTML } from './utils.js';
+import { enhancedDiff } from './diff.js';
+import { splitParagraphs, estimateParagraphTimes } from './paragraph.js';
 
 let materialId = null;
 let player = null;
 let showingOriginal = false;
+let paragraphMode = false;       // 是否为段落重练模式
+let paragraphIdx = null;         // 当前重练的段落索引
+let paragraphText = '';          // 当前段落原文
 
-export async function renderDictationView(container, matId) {
+export async function renderDictationView(container, matId, paraIdx) {
   materialId = matId;
+  paragraphIdx = (paraIdx !== undefined) ? paraIdx : null;
+  paragraphMode = (paragraphIdx !== null);
+
   const material = getMaterialById(matId);
   if (!material) {
     container.innerHTML = '<div class="empty-state"><h3>素材未找到</h3></div>';
@@ -30,18 +38,47 @@ export async function renderDictationView(container, matId) {
     player.load(audioData.blob);
   }
 
-  // 加载已有的听写内容
-  const savedInput = material.dictationInput || '';
-  const savedResult = material.dictationResult || null;
+  // 段落模式：提取段落原文，计算起始时间
+  let effectiveOriginal = material.originalText;
+  if (paragraphMode) {
+    const paragraphs = splitParagraphs(material.originalText);
+    if (paragraphIdx < paragraphs.length) {
+      const para = paragraphs[paragraphIdx];
+      paragraphText = para.text;
+      effectiveOriginal = para.text;
+
+      // 估算段落起始时间，加载后跳转
+      const timed = estimateParagraphTimes(paragraphs, material.audioDuration || 0);
+      const estimatedStart = timed[paragraphIdx]?.startTime || 0;
+
+      // 音频就绪后跳转到段落起始位置
+      const seekOnReady = () => {
+        if (player && player.isReady()) {
+          player.seek(estimatedStart);
+        } else if (player) {
+          player.audio.addEventListener('loadedmetadata', () => {
+            player.seek(estimatedStart);
+          }, { once: true });
+        }
+      };
+      // 延迟尝试，等待音频加载
+      setTimeout(seekOnReady, 500);
+    }
+  }
+
+  // 加载已有的听写内容（段落模式不使用保存的全文输入）
+  const savedInput = paragraphMode ? '' : (material.dictationInput || '');
+  const savedResult = paragraphMode ? null : (material.dictationResult || null);
 
   showingOriginal = false;
 
-  renderUI(container, material, savedInput, savedResult);
+  renderUI(container, material, savedInput, savedResult, effectiveOriginal);
 }
 
-function renderUI(container, material, savedInput, savedResult) {
-  const hasResult = !!savedResult;
-  const totalErr = savedResult ? savedResult.filter(w => !w.match).length : 0;
+function renderUI(container, material, savedInput, savedResult, effectiveOriginal) {
+  const displayOriginal = effectiveOriginal || material.originalText;
+  const hasResult = !!(savedResult && savedResult.pairs);
+  const errCount = hasResult ? savedResult.stats.missing + savedResult.stats.extra + savedResult.stats.replacement : 0;
 
   container.innerHTML = `
     <div class="dictation-view">
@@ -51,11 +88,11 @@ function renderUI(container, material, savedInput, savedResult) {
           <i class="fa-solid fa-arrow-left"></i> 返回
         </button>
         <span class="text-sm truncate max-w-[300px]" style="color: var(--text-secondary);">
-          ${sanitizeHTML(material.title)}
+          ${sanitizeHTML(material.title)}${paragraphMode ? ` · 段落${paragraphIdx + 1}重练` : ''}
         </span>
         ${hasResult ? `
-          <span class="badge ${totalErr === 0 ? 'badge-success' : 'badge-danger'}">
-            ${totalErr === 0 ? '✓ 完全正确' : totalErr + ' 处不一致'}
+          <span class="badge ${errCount === 0 ? 'badge-success' : 'badge-danger'}">
+            ${errCount === 0 ? '✓ 完全正确' : errCount + ' 处不一致'}
           </span>
         ` : ''}
       </div>
@@ -100,7 +137,7 @@ function renderUI(container, material, savedInput, savedResult) {
       <div id="original-text-area" class="${showingOriginal ? '' : 'hidden'} mb-3 p-4 rounded-lg"
            style="background: var(--bg); border: 1px solid var(--border); line-height: 1.8;">
         <div class="text-xs mb-2" style="color: var(--text-secondary);">📝 原文</div>
-        <div class="leading-relaxed" style="font-size: 0.9375rem;">${sanitizeHTML(material.originalText)}</div>
+        <div class="leading-relaxed" style="font-size: 0.9375rem;">${sanitizeHTML(displayOriginal)}</div>
       </div>
 
       <!-- Input Area -->
@@ -132,7 +169,7 @@ function renderUI(container, material, savedInput, savedResult) {
           <div class="card-header">
             <h3 class="font-semibold">
               <i class="fa-solid fa-code-compare"></i> 对比结果
-              ${totalErr > 0 ? `<span class="badge badge-danger ml-2">${totalErr} 处不一致</span>` : '<span class="badge badge-success ml-2">全部正确</span>'}
+              ${errCount > 0 ? `<span class="badge badge-danger ml-2">${errCount} 处不一致</span>` : '<span class="badge badge-success ml-2">全部正确</span>'}
             </h3>
           </div>
           <div class="card-body">
@@ -213,15 +250,63 @@ function bindEvents(container, material) {
     const input = container.querySelector('#dict-input')?.value || '';
     if (!input.trim()) { showToast('请先输入内容', 'warning'); return; }
 
-    const result = simpleDiff(material.originalText, input.trim());
+    const originalToDiff = paragraphMode ? paragraphText : material.originalText;
+    const diff = enhancedDiff(originalToDiff, input.trim());
+
+    if (paragraphMode) {
+      // 段落模式：保存到 paragraphResults，返回反馈页
+      material.paragraphResults = material.paragraphResults || {};
+      material.paragraphResults[paragraphIdx] = {
+        pairs: diff.pairs,
+        stats: diff.stats,
+        accuracy: diff.accuracy,
+        grade: diff.grade,
+        createdAt: new Date().toISOString(),
+      };
+      upsertMaterial(material);
+
+      const totalErr = diff.stats.missing + diff.stats.extra + diff.stats.replacement;
+      const msg = totalErr === 0 ? '🎉 完全正确！' : `段落${paragraphIdx + 1} 准确率 ${diff.accuracy}%`;
+      showToast(msg, totalErr === 0 ? 'success' : 'info');
+      recordTrainingDay();
+      window.App.switchView('feedback', { materialId: material.id });
+      return;
+    }
+
+    // 全文模式：保存 dictationResult 完整结构
     material.dictationInput = input.trim();
-    material.dictationResult = result;
+    material.dictationResult = {
+      pairs: diff.pairs,
+      stats: diff.stats,
+      accuracy: diff.accuracy,
+      grade: diff.grade,
+      createdAt: new Date().toISOString(),
+    };
     material.status = 'completed';
+
+    // 追加 scoreHistory，最多保留 20 条
+    material.scoreHistory = material.scoreHistory || [];
+    material.scoreHistory.push({
+      accuracy: diff.accuracy,
+      grade: diff.grade,
+      stats: diff.stats,
+      createdAt: new Date().toISOString(),
+    });
+    if (material.scoreHistory.length > 20) {
+      material.scoreHistory = material.scoreHistory.slice(-20);
+    }
+
     upsertMaterial(material);
 
-    const errCount = result.filter(r => !r.match).length;
-    showToast(errCount === 0 ? '🎉 完全正确！' : `${errCount} 处不一致`, errCount === 0 ? 'success' : 'info');
-    renderUI(container, material, input.trim(), result);
+    const totalErr = diff.stats.missing + diff.stats.extra + diff.stats.replacement;
+    const msg = totalErr === 0 ? '🎉 完全正确！' : `准确率 ${diff.accuracy}% · ${totalErr} 处错误`;
+    showToast(msg, totalErr === 0 ? 'success' : 'info');
+
+    // 记录连续学习天数
+    recordTrainingDay();
+
+    // 跳转反馈页面
+    window.App.switchView('feedback', { materialId: material.id });
   });
 
   // 重试
@@ -250,58 +335,26 @@ function bindEvents(container, material) {
   }
 }
 
-// ==================== 简单逐词对比 ====================
+// ==================== 对比结果渲染 ====================
 
 /**
- * 简单 diff：将原文和用户输入逐词对齐，不一致的标红
- * 返回 [{ word, match: boolean }]
- */
-function simpleDiff(original, userInput) {
-  const origWords = (original || '').split(/\s+/).filter(w => w.length > 0);
-  const userWords = (userInput || '').split(/\s+/).filter(w => w.length > 0);
-
-  // 以原文为基准，逐个对比
-  const result = [];
-  const maxLen = Math.max(origWords.length, userWords.length);
-
-  for (let i = 0; i < maxLen; i++) {
-    const orig = origWords[i];
-    const user = userWords[i];
-
-    if (orig && user) {
-      const match = normalizeWord(orig) === normalizeWord(user);
-      result.push({ word: orig, userWord: user, match });
-    } else if (orig && !user) {
-      result.push({ word: orig, userWord: null, match: false });
-    } else if (!orig && user) {
-      result.push({ word: user, userWord: user, match: false, extra: true });
-    }
-  }
-
-  return result;
-}
-
-function normalizeWord(w) {
-  return w.toLowerCase().replace(/[^a-z0-9']/g, '');
-}
-
-/**
- * 渲染对比结果：不一致标红，不区分类型
+ * 渲染对比结果（在 dictation 页面内嵌展示，复用反馈页的着色逻辑）
  */
 function renderComparison(result, originalText) {
-  if (!result || result.length === 0) return sanitizeHTML(originalText);
+  if (!result || !result.pairs || result.pairs.length === 0) return sanitizeHTML(originalText);
 
-  return result.map(r => {
-    const word = sanitizeHTML(r.word);
-    if (r.match) {
+  return result.pairs.map(p => {
+    const word = sanitizeHTML(p.word);
+    if (p.match) {
       return `<span style="color: var(--success);">${word}</span>`;
-    } else if (r.extra) {
-      return `<span style="color: var(--danger);">${word}</span>`;
-    } else if (!r.userWord) {
-      return `<span style="color: var(--danger); background: rgba(239,68,68,0.1); padding: 1px 3px; border-radius: 3px;">${word}</span>`;
-    } else {
-      return `<span style="color: var(--danger); background: rgba(239,68,68,0.1); padding: 1px 3px; border-radius: 3px;" title="你写的是: ${sanitizeHTML(r.userWord)}">${word}</span>`;
+    } else if (p.errorType === 'missing') {
+      return `<span style="color: var(--warning); border-bottom: 2px dashed var(--warning);" title="漏词">${word}</span>`;
+    } else if (p.errorType === 'extra') {
+      return `<span style="color: var(--text-tertiary); text-decoration: line-through;" title="多词">${word}</span>`;
+    } else if (p.errorType === 'replacement') {
+      return `<span style="color: var(--danger); background: rgba(239,68,68,0.1); padding: 1px 3px; border-radius: 3px;" title="你写的是: ${sanitizeHTML(p.userWord)}">${word}</span>`;
     }
+    return `<span>${word}</span>`;
   }).join(' ');
 }
 
@@ -332,4 +385,7 @@ export function destroyDictation() {
   if (player) { player.destroy(); player = null; }
   materialId = null;
   showingOriginal = false;
+  paragraphMode = false;
+  paragraphIdx = null;
+  paragraphText = '';
 }

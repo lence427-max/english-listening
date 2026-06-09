@@ -1,5 +1,5 @@
 /**
- * 十篇精听工坊 — 音频播放器（修复版）
+ * Silentium — 音频播放器（修复版）
  */
 
 export function createPlayer(options = {}) {

@@ -1,5 +1,5 @@
 /**
- * 十篇精听工坊 — 在线词典模块
+ * Silentium — 在线词典模块
  * 主 API：Free Dictionary API，备用：Datamuse API
  */
 

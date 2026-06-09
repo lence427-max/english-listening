@@ -1,5 +1,5 @@
 /**
- * 十篇精听工坊 — 计时专注模式
+ * Silentium — 计时专注模式
  */
 
 import { showToast, confirmDialog, sanitizeHTML } from './utils.js';

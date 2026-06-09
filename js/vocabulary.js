@@ -1,5 +1,5 @@
 /**
- * 十篇精听工坊 — 生词本模块
+ * Silentium — 生词本模块
  */
 
 import { getVocabulary, deleteVocabularyItem, getMaterials } from './storage.js';
@@ -145,7 +145,7 @@ function exportVocabulary(vocab) {
   const materialMap = new Map(materials.map(m => [m.id, m]));
   const grouped = groupByMaterial(vocab, materialMap);
 
-  let text = '# 十篇精听工坊 — 生词本导出\n';
+  let text = '# Silentium — 生词本导出\n';
   text += `# 导出时间: ${new Date().toISOString().split('T')[0]}\n\n`;
 
   for (const [materialId, words] of Object.entries(grouped)) {
