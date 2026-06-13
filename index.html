@@ -12,10 +12,10 @@
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-  <!-- Google Fonts: Inter -->
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- Custom Styles -->
   <link rel="stylesheet" href="css/style.css">
@@ -39,14 +39,23 @@
         <a href="#" data-view="materials" class="active">
           <i class="fa-solid fa-folder-open"></i> 素材管理
         </a>
+        <a href="#" data-view="library">
+          <i class="fa-solid fa-book-open"></i> 内容库
+        </a>
         <a href="#" data-view="training">
           <i class="fa-solid fa-pen-to-square"></i> 开始训练
         </a>
         <a href="#" data-view="vocabulary">
           <i class="fa-solid fa-book"></i> 生词本
         </a>
+        <a href="#" data-view="wordbank">
+          <i class="fa-solid fa-database"></i> 词库
+        </a>
         <a href="#" data-view="dashboard">
           <i class="fa-solid fa-chart-line"></i> 进度看板
+        </a>
+        <a href="#" data-view="explore">
+          <i class="fa-solid fa-globe"></i> 知识探索
         </a>
       </nav>
 
@@ -75,11 +84,17 @@
       <!-- View: 素材管理 -->
       <div class="view-panel" id="view-materials"></div>
 
+      <!-- View: 内容库 -->
+      <div class="view-panel hidden" id="view-library"></div>
+
       <!-- View: 开始训练 -->
       <div class="view-panel hidden" id="view-training"></div>
 
       <!-- View: 生词本 -->
       <div class="view-panel hidden" id="view-vocabulary"></div>
+
+      <!-- View: 词库 -->
+      <div class="view-panel hidden" id="view-wordbank"></div>
 
       <!-- View: 进度看板 -->
       <div class="view-panel hidden" id="view-dashboard"></div>
@@ -92,6 +107,9 @@
 
       <!-- View: 分段训练 -->
       <div class="view-panel hidden" id="view-segmented"></div>
+
+      <!-- View: 探索模式（全屏画布，由 explore-mode.js 接管） -->
+      <div class="view-panel hidden" id="view-explore"></div>
     </main>
   </div>
 

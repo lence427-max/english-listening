@@ -4,6 +4,7 @@
 
 import {
   getMaterials, upsertMaterial, deleteMaterial, getMaterialById,
+  getTrainingRecords,
   saveAudio, getAudio, deleteAudio,
   exportAllData, importAllData,
 } from './storage.js';
@@ -14,6 +15,7 @@ import {
   generateId, formatTime, formatDateCN, formatFileSize,
   showToast, confirmDialog, getAudioDuration, sanitizeHTML,
 } from './utils.js';
+import { countMaterialsNeedingReview } from './material-stats.js';
 
 let currentViewMaterialId = null;
 let player = null;
@@ -176,9 +178,7 @@ function getDictationErrCount(material) {
 function computeStats(materials) {
   const completedCount = materials.filter(m => m.status === 'completed').length;
   const completionPercent = materials.length > 0 ? Math.round((completedCount / 10) * 100) : 0;
-
-  // TODO: 等复习模块实现后完善 needReviewCount
-  const needReviewCount = 0;
+  const needReviewCount = countMaterialsNeedingReview(materials, getTrainingRecords());
 
   return { completedCount, completionPercent, needReviewCount };
 }
@@ -455,6 +455,7 @@ export function showMaterialModal(materialId = null) {
       audioId: id,
       audioFileName: audioFile ? audioFile.name : (material?.audioFileName || ''),
       audioDuration: duration,
+      audioAvailable: true,
       sentences: [],
       paragraphs,
       status: material?.status || 'pending',

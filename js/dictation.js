@@ -2,11 +2,15 @@
  * Silentium — 极简听写（整篇模式）
  */
 
-import { getMaterialById, upsertMaterial, getAudio, recordTrainingDay } from './storage.js';
+import {
+  getMaterialById, upsertMaterial, getAudio, recordTrainingDay,
+  getTrainingRecords, saveTrainingRecord,
+} from './storage.js';
 import { createPlayer } from './player.js';
 import { formatTimeMs, showToast, sanitizeHTML } from './utils.js';
 import { enhancedDiff } from './diff.js';
 import { splitParagraphs, estimateParagraphTimes } from './paragraph.js';
+import { applyCompletedDictation, buildDictationReviewRecord } from './training-completion.js';
 
 let materialId = null;
 let player = null;
@@ -81,7 +85,7 @@ function renderUI(container, material, savedInput, savedResult, effectiveOrigina
   const errCount = hasResult ? savedResult.stats.missing + savedResult.stats.extra + savedResult.stats.replacement : 0;
 
   container.innerHTML = `
-    <div class="dictation-view">
+    <div class="dictation-view learning-workspace">
       <!-- Header -->
       <div class="flex items-center justify-between mb-4">
         <button class="btn btn-ghost btn-sm" id="dict-back-btn">
@@ -98,7 +102,7 @@ function renderUI(container, material, savedInput, savedResult, effectiveOrigina
       </div>
 
       <!-- Audio Player Bar -->
-      <div class="card mb-4">
+      <div class="card mb-4 workspace-player-card">
         <div class="card-body" style="padding: 0.75rem 1rem;">
           <div class="audio-player">
             <button class="play-btn" id="dict-play-btn">
@@ -141,7 +145,7 @@ function renderUI(container, material, savedInput, savedResult, effectiveOrigina
       </div>
 
       <!-- Input Area -->
-      <div class="card mb-4">
+      <div class="card mb-4 workspace-input-card">
         <div class="card-body">
           <textarea class="form-textarea" id="dict-input" rows="14"
                     placeholder="播放音频，在这里输入你听到的内容..."
@@ -273,30 +277,16 @@ function bindEvents(container, material) {
       return;
     }
 
-    // 全文模式：保存 dictationResult 完整结构
-    material.dictationInput = input.trim();
-    material.dictationResult = {
-      pairs: diff.pairs,
-      stats: diff.stats,
-      accuracy: diff.accuracy,
-      grade: diff.grade,
-      createdAt: new Date().toISOString(),
-    };
-    material.status = 'completed';
-
-    // 追加 scoreHistory，最多保留 20 条
-    material.scoreHistory = material.scoreHistory || [];
-    material.scoreHistory.push({
-      accuracy: diff.accuracy,
-      grade: diff.grade,
-      stats: diff.stats,
-      createdAt: new Date().toISOString(),
-    });
-    if (material.scoreHistory.length > 20) {
-      material.scoreHistory = material.scoreHistory.slice(-20);
-    }
-
+    // 全文模式：保存训练结果并进入复习队列
+    const completedAt = new Date().toISOString();
+    applyCompletedDictation(material, input.trim(), diff, completedAt);
     upsertMaterial(material);
+    saveTrainingRecord(buildDictationReviewRecord(
+      getTrainingRecords(),
+      material.id,
+      diff,
+      { completedAt }
+    ));
 
     const totalErr = diff.stats.missing + diff.stats.extra + diff.stats.replacement;
     const msg = totalErr === 0 ? '🎉 完全正确！' : `准确率 ${diff.accuracy}% · ${totalErr} 处错误`;

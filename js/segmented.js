@@ -103,7 +103,7 @@ function renderParagraph(container, material, showComparison = false) {
   segPlayedOnce = false;
 
   container.innerHTML = `
-    <div class="segmented-view">
+    <div class="segmented-view learning-workspace">
       <!-- Header -->
       <div class="flex items-center justify-between mb-4">
         <button class="btn btn-ghost btn-sm" id="seg-back-btn">
@@ -141,7 +141,7 @@ function renderParagraph(container, material, showComparison = false) {
       ` : ''}
 
       <!-- Paragraph text (collapsible) -->
-      <div class="card mb-4">
+      <div class="card mb-4 workspace-source-card">
         <div class="card-header">
           <h3 class="font-semibold text-sm">📖 原文</h3>
           <div class="flex items-center gap-3">
@@ -160,7 +160,7 @@ function renderParagraph(container, material, showComparison = false) {
       </div>
 
       <!-- Audio + Time adjustment -->
-      <div class="card mb-4">
+      <div class="card mb-4 workspace-player-card">
         <div class="card-body" style="padding: 0.75rem 1rem;">
           <!-- Audio progress bar -->
           <div class="seg-audio-bar">
@@ -201,7 +201,7 @@ function renderParagraph(container, material, showComparison = false) {
       </div>
 
       <!-- Input -->
-      <div class="card mb-4">
+      <div class="card mb-4 workspace-input-card">
         <div class="card-header">
           <h3 class="font-semibold text-sm">✏️ 输入你听到的内容</h3>
         </div>

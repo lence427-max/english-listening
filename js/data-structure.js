@@ -17,6 +17,8 @@ export function createMaterial(data = {}) {
     audioId: data.audioId || '',
     audioFileName: data.audioFileName || '',
     audioDuration: data.audioDuration || 0,
+    audioAvailable: data.audioAvailable ?? Boolean(data.audioId),
+    sourceUrl: data.sourceUrl || '',
     sentences: data.sentences || [],
     paragraphs: data.paragraphs || [],                // [{id, index, text, startTime, endTime, wordCount}]
     dictationInput: data.dictationInput || '',       // 整篇听写输入

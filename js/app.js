@@ -11,6 +11,7 @@ import { initDictionary } from './dictionary.js';
 import { renderFocusModeButton } from './focus-mode.js';
 import { getMaterials } from './storage.js';
 import { formatTime, formatDateCN, sanitizeHTML } from './utils.js';
+import { loadAndRenderView } from './view-loader.js';
 
 // 当前活动视图
 let currentView = 'materials';
@@ -76,7 +77,15 @@ function initNavigation() {
  * @param {string} view - 视图名称
  * @param {object} opts - 可选参数 { materialId }
  */
-function switchView(view, opts = {}) {
+async function switchView(view, opts = {}) {
+  // 离开探索模式时清理
+  if (currentView === 'explore' && view !== 'explore') {
+    try {
+      const { destroyExploreMode } = await import('./explore-mode.js');
+      destroyExploreMode();
+    } catch (e) { /* module might not be loaded */ }
+  }
+
   currentView = view;
 
   // 隐藏所有视图
@@ -97,6 +106,12 @@ function switchView(view, opts = {}) {
 
   // 渲染视图内容
   switch (view) {
+    case 'library':
+      renderLazyView(target, () => import('./content-library.js'), m => m.renderContentLibrary(target));
+      break;
+    case 'wordbank':
+      renderLazyView(target, () => import('./word-bank.js'), m => m.renderWordBankView(target));
+      break;
     case 'materials':
       renderMaterialsView(target);
       break;
@@ -118,13 +133,16 @@ function switchView(view, opts = {}) {
       bindDashboardEvents(target);
       break;
     case 'feedback':
-      import('./feedback.js').then(m => m.renderFeedbackView(target, opts.materialId));
+      renderLazyView(target, () => import('./feedback.js'), m => m.renderFeedbackView(target, opts.materialId));
       break;
     case 'shadowing':
-      import('./shadowing.js').then(m => m.renderShadowingView(target, opts.materialId));
+      renderLazyView(target, () => import('./shadowing.js'), m => m.renderShadowingView(target, opts.materialId));
       break;
     case 'segmented':
-      import('./segmented.js').then(m => m.renderSegmentedView(target, opts.materialId));
+      renderLazyView(target, () => import('./segmented.js'), m => m.renderSegmentedView(target, opts.materialId));
+      break;
+    case 'explore':
+      renderLazyView(target, () => import('./explore-mode.js'), m => m.renderExploreView(target, opts.word));
       break;
   }
 
@@ -138,6 +156,26 @@ function switchView(view, opts = {}) {
     sidebar.classList.remove('open');
     if (overlay) overlay.classList.remove('visible');
   }
+}
+
+function renderLazyView(target, load, render) {
+  return loadAndRenderView({
+    load,
+    render,
+    onError(error) {
+      console.error('[App] 视图加载失败:', error);
+      if (!target) return;
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'empty-state';
+      const title = document.createElement('h3');
+      title.textContent = '页面加载失败';
+      const message = document.createElement('p');
+      message.textContent = '请刷新页面后重试。';
+      wrapper.append(title, message);
+      target.replaceChildren(wrapper);
+    },
+  });
 }
 
 /**
@@ -177,16 +215,16 @@ function renderTrainingView(container) {
 
   container.innerHTML = `
     <div class="training-select-view">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div class="page-hero page-hero-compact">
         <div>
-          <h1 class="text-2xl font-bold">开始训练</h1>
-          <p class="text-sm mt-1" style="color: var(--text-secondary);">
-            共 ${trainableMaterials.length} 篇素材，选择一篇开始精听
-          </p>
+          <div class="page-eyebrow">LISTENING WORKSPACE</div>
+          <h1 class="page-title">开始训练</h1>
+          <p class="page-subtitle">从 ${trainableMaterials.length} 篇素材中选择一篇，进入你的精听工作台。</p>
         </div>
+        <div class="page-hero-orbit" aria-hidden="true"><i class="fa-solid fa-headphones-simple"></i></div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="training-card-grid">
         ${trainableMaterials.map(m => {
           const s = statusMap[m.status] || statusMap.pending;
           const completedSentences = m.sentences.filter(s => s.dictationResult).length;
@@ -194,12 +232,13 @@ function renderTrainingView(container) {
             ? Math.round((completedSentences / m.sentences.length) * 100) : 0;
 
           return `
-            <div class="card hover-highlight cursor-pointer training-material-card"
+            <div class="card cursor-pointer training-material-card"
                  data-id="${m.id}" data-status="${m.status}">
               <div class="card-body">
+                <div class="training-card-kicker"><i class="fa-solid fa-wave-square"></i> FOCUSED LISTENING</div>
                 <div class="flex items-start justify-between mb-3">
                   <div class="flex-1 min-w-0">
-                    <h3 class="font-semibold truncate">${sanitizeHTML(m.title)}</h3>
+                    <h3 class="training-card-title">${sanitizeHTML(m.title)}</h3>
                     <div class="text-xs mt-1" style="color: var(--text-secondary);">
                       ${m.sentences.length || 0} 句 · ${m.audioDuration ? formatTime(m.audioDuration) : '—'}
                       · ${formatDateCN(m.updatedAt)}
@@ -222,7 +261,7 @@ function renderTrainingView(container) {
                   </div>
                 ` : ''}
 
-                <div class="flex items-center justify-between">
+                <div class="training-card-footer">
                   <span class="text-xs" style="color: var(--text-secondary);">
                     ${getActionLabel(m.status)}
                   </span>

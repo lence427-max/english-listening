@@ -2,8 +2,9 @@
  * Silentium — 智能复习模块
  */
 
-import { getMaterials, getTrainingRecords, upsertMaterial, saveTrainingRecord } from './storage.js';
+import { getMaterials, getTrainingRecords, saveTrainingRecord } from './storage.js';
 import { showToast, sanitizeHTML, formatDateCN } from './utils.js';
+import { collectReviewCandidates } from './review-candidates.js';
 
 /**
  * 开始抽检复习模式
@@ -23,21 +24,7 @@ export async function startReview() {
     return;
   }
 
-  // 收集所有已完成训练的句子
-  const allSentences = [];
-  for (const record of needReviewRecords) {
-    const material = materials.find(m => m.id === record.materialId);
-    if (!material || !material.sentences) continue;
-    material.sentences.forEach(s => {
-      if (s.dictationResult) {
-        allSentences.push({
-          sentence: s,
-          materialId: material.id,
-          materialTitle: material.title,
-        });
-      }
-    });
-  }
+  const allSentences = collectReviewCandidates(materials, needReviewRecords);
 
   if (allSentences.length === 0) {
     showToast('没有可复习的句子', 'info');
@@ -103,7 +90,7 @@ function showReviewModal(selectedSentences) {
       ${renderReviewSentence(item, currentIdx, selectedSentences.length)}
       <div class="mt-3 p-3 rounded-lg" style="background: var(--bg); border: 1px solid var(--border);">
         <div class="text-xs mb-1" style="color: var(--text-secondary);">📝 原文</div>
-        <div class="text-sm" style="font-family: var(--font-mono);">${sanitizeHTML(item.sentence.text)}</div>
+        <div class="text-sm" style="font-family: var(--font-mono);">${sanitizeHTML(item.text)}</div>
       </div>
     `;
   });
@@ -139,9 +126,9 @@ function renderReviewSentence(item, idx, total) {
       <textarea class="form-textarea" id="review-input" rows="3"
                 placeholder="输入你听到的内容..."
                 style="font-family: var(--font-mono);"></textarea>
-      ${item.sentence.dictationResult ? `
+      ${item.result ? `
         <div class="mt-2 text-xs" style="color: var(--text-secondary);">
-          上次错误：${item.sentence.dictationResult.words.filter(w => w.status !== 'correct').length} 处
+          上次错误：${item.errorCount} 处
         </div>
       ` : ''}
     </div>

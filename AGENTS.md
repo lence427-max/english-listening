@@ -27,7 +27,7 @@
 ```
 English web/
 ├── index.html
-├── CLAUDE.md
+├── AGENTS.md
 ├── css/style.css
 ├── js/
 │   ├── app.js              # SPA 路由/视图切换
@@ -122,9 +122,6 @@ IndexedDB: EnglishListeningDB / audioFiles (key = materialId)
 4. **时间估算**：词数比例（段落词数/总词数×总时长）。
 5. **错误分类**：missing + extra 按序配对合并为 replacement，accuracy = correct/(correct+missing+replacement)。
 6. **API 顺序**：查词先出英文（快），异步补中文（慢），不阻塞显示。
-7. **验证命令**：`npm test` 运行回归测试；`npm run check` 检查所有 JS 文件语法。若 PowerShell 禁止执行 `npm.ps1`，使用 `npm.cmd test` / `npm.cmd run check`。
 
 ## 正在开发
-- Explore Mode：V5 已实现。Concept Universe 概念宇宙 — 中心概念卡、知识岛聚类布局、空间路径、飞行动画、跨岛弱连接、AI 意外桥接、Knowledge Dust、Concept Journey 和听力联动 UI。
-- 2026-06-11 稳定性修复：补回 `pathHistory` 状态；连续搜索采用“最新请求获胜”并取消旧请求；动画取消会结束等待；AI 请求具备 10 秒超时；动态视图加载增加错误兜底；待复习统计读取真实训练记录。
-- 2026-06-11 学习链路修复：完成全文听写时创建/更新复习记录；智能复习兼容整篇、段落和旧版句子结果；核心分段、听写对比、训练完成与复习候选已有自动测试。
+- Explore Mode：全屏知识探索画布。当前状态：V5 已实现。Concept Universe 概念宇宙 — 中心概念卡（300×170，含 AI Insight）+ 知识岛聚类布局（黄金角螺旋）+ 概念岛领土模糊光晕 + 空间路径标记 + 飞行动画（650ms pan+zoom）+ 跨岛弱连接 + AI 意外桥接 + Knowledge Dust 双重背景尘埃 + Concept Journey 推荐路线 + 听力联动 UI 入口。V5 修复：fetch 10s 超时 + 15s 安全定时器防止永久 loading。

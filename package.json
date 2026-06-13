@@ -1,0 +1,10 @@
+{
+  "name": "silentium",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve-local.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "check": "node scripts/check-js.mjs"
+  }
+}
